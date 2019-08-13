@@ -67,7 +67,7 @@ def save_to_album(image_name, vk_group_id):
         'photo': save_params['photo'],
         'hash': save_params['hash'],
     }
-    response = vk_api_request(method_name, payload)
+    response = make_vk_api_request(method_name, payload)
     photo_attributes = response['response'][0]
     return photo_attributes
 
@@ -83,11 +83,11 @@ def vk_upload_on_serv(image_name, vk_group_id):
 def vk_get_upload_url(vk_group_id):
     method_name = 'photos.getWallUploadServer'
     payload = {'group_id': vk_group_id}
-    api_response = vk_api_request(method_name, payload)
+    api_response = make_vk_api_request(method_name, payload)
     upload_url = api_response['response']['upload_url']
     return upload_url
 
-def vk_api_request(method_name, payload):
+def make_vk_api_request(method_name, payload):
     vk_access_token = os.getenv('VK_ACCESS_TOKEN')
     vk_api_version = '5.101'
     vk_url = f'https://api.vk.com/method/{method_name}'
@@ -96,9 +96,12 @@ def vk_api_request(method_name, payload):
         'v': f'{vk_api_version}'
     }
     payload.update(vk_required_params) 
-    response = requests.post(vk_url, params=payload)
-    response.raise_for_status()
-    return response.json()
+    response = requests.post(vk_url, params=payload).json()
+    try: 
+        error_msg = response['error']['error_msg']
+        raise Exception(f'vk api request error. {error_msg}')
+    except KeyError:
+        return response
 
 def publish_post_on_wall(message, attachments, vk_group_id):
     method_name = 'wall.post'
@@ -108,7 +111,7 @@ def publish_post_on_wall(message, attachments, vk_group_id):
         'message': message,
         'attachments': attachments,        
     }
-    vk_api_request(method_name, payload)
+    make_vk_api_request(method_name, payload)
 
 if __name__ == '__main__':
     main()
